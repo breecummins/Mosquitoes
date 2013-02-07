@@ -1,9 +1,10 @@
 import numpy as np
+import environment
 
 class mosquitoPopulation(object):
 
     '''
-    This class instantiates a group of mosquito agents with the same parameters. 
+    This class represents a group of mosquito agents with the same parameters. 
     It is mandatorily subclassed to choose a plume tracking strategy (subclasses
     tropotaxis and klinotaxis) and subclassed again to choose a plume finding 
     strategy (upwind, downwind, and crosswind).
@@ -27,6 +28,37 @@ class mosquitoPopulation(object):
                     'windThresh':0.0,'windSat':0.5,'windKappa':0.0,'windDirMin':np.pi/6,
                     'windDirMax':np.pi/2}
         self.mosqParams.update(kwargs)
+        self.mosqParams['windScaledThresh'] = self.mosqParams['windThresh']/self.mosqParams['windSat']
+        self.mosqParams['CO2ScaledThresh'] = self.mosqParams['CO2Thresh']/self.mosqParams['CO2Sat']
+        if self.mosqParams['windScaledThresh'] != 0 and self.mosqParams['windKappa'] <= -1.0/self.mosqParams['windScaledThresh']:
+            raise ValueError('windKappa must be > -1.0 / %0.3f' %self.mosqParams['windScaledThresh'])
+        if self.mosqParams['CO2ScaledThresh'] != 0 and self.mosqParams['CO2Kappa'] <= -1.0/self.mosqParams['CO2ScaledThresh']:
+            raise ValueError('CO2Kappa must be > -1.0 / %0.3f' %self.mosqParams['CO2ScaledThresh'])
+
+    def _updatePosition(self,environment):
+        '''
+        Move to new position.
+        
+        '''
+        u,v,CO2 = environment.getSignal(self.currentPosx,self.currentPosy)
+        self = self._respondToSignal(u,v,CO2)
+
+    def _respondToSignal(self,u,v,CO2):
+        '''
+        Stub to be defined by subclass
+
+        '''
+        return None
+
+
+class klinotaxis(mosquitoPopulation):
+    '''
+    Plume tracking using memory.
+
+    '''
+    def __init__(self,initPos,**kwargs):
+        mosquitoPopulation.__init__(initPos,**kwargs)
+        #need extra dict entries here
 
     def _responseCurve(self,responseStr,currentVal):
         '''
@@ -37,14 +69,11 @@ class mosquitoPopulation(object):
         the location of each mosquito.
 
         '''
-        unscaledThresh = self.mosqParams[responseStr+'Thresh']
         unscaledSat = self.mosqParams[responseStr+'Sat']
         val = [v/unscaledSat for v in currentVal]
-        thresh = unscaledThresh/unscaledSat
         sat = 1.0
         kappa = self.mosqParams[responseStr+'Kappa']
-        if thresh != 0 and kappa <= -1.0/thresh:
-            raise ValueError(responseStr+'Kappa must be > -1.0 / %0.3f' %thresh)
+        thresh = self.mosqParams[responseStr+'ScaledThresh']
         def response(v):
             if v <= thresh:
                 return 0.0
@@ -54,29 +83,31 @@ class mosquitoPopulation(object):
                 return (1.0+kappa*thresh)*(v - thresh)/(1.0+kappa*thresh*v*(1.0-thresh))
         return map(response,val)
 
-    def _outsideDomain(self,bottom,top,left,right):
+    def _inPlume(self,ind):
         '''
-        This method determines which mosquitoes are currently outside the 
-        CO2 computational domain.
+        Put in agent rules code.
+
+        This generator determines which mosquitoes are currently inside an odor
+        plume.
+        currentCO2 is the CO2 level at the current mosquito locations.
 
         '''
-        outsidex = [1.0 if x > right or x < left else 0.0 for x in self.currentPosx]
-        outsidey = [1.0 if y > top or y < bottom else 0.0 for x in self.currentPosy]
-        return [(outsidex[k] or outsidey[k]) for k in range(len(outsidex))]
-    
-    def _plumeFinding(self):
-        '''
-        Stub to be defined by subclass
+        if self.currentCO2[ind] >= self.mosqParams['CO2Thresh']:
+            return True
+        else:
+            return False
         
-        '''
-        return None
 
-    def _plumeTracking(self):
-        '''
-        Stub to be defined by subclass
-        
-        '''
-        return None
+
+class upwind(klinotaxis):
+    pass
+
+class downwind(klinotaxis):
+    pass
+
+class crosswind(klinotaxis):
+    pass
+
 
 if __name__ == '__main__':
     
