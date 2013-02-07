@@ -26,6 +26,7 @@ class mosquitoPopulation(object):
                     'CO2Thresh':0.01,'CO2Sat':1.0,'CO2Kappa':0.0,'spdMin':0.4,'spdMax':1.5,
                     'windThresh':0.0,'windSat':0.5,'windKappa':0.0,'windDirMin':np.pi/6,
                     'windDirMax':np.pi/2}
+        self.mosqParams.update(kwargs)
 
     def _responseCurve(self,responseStr,currentVal):
         '''
@@ -42,7 +43,7 @@ class mosquitoPopulation(object):
         thresh = unscaledThresh/unscaledSat
         sat = 1.0
         kappa = self.mosqParams[responseStr+'Kappa']
-        if kappa <= -1.0/thresh:
+        if thresh != 0 and kappa <= -1.0/thresh:
             raise ValueError(responseStr+'Kappa must be > -1.0 / %0.3f' %thresh)
         def response(v):
             if v <= thresh:
@@ -78,6 +79,13 @@ class mosquitoPopulation(object):
         return None
 
 if __name__ == '__main__':
-    print('Working')
+    
+    mymosqs = mosquitoPopulation([1.0,2.0,3.0],windKappa=1.0,windThresh=0.01)
+    responseStr = 'wind'
+    currentVal = [-1.e-12,0.1,1.0+1.e-12]
+    print(mymosqs._responseCurve(responseStr,currentVal))
+    print(mymosqs.mosqParams)
+    
+    
 
 
