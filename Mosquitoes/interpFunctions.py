@@ -20,7 +20,7 @@ def interpFromGridWithMaps(xy,h,randVel1,randVel2,CO2):
     
     # Find the proportion of the value at each node that contributes to the 
     # interpolation at (x,y). nodes = (lowerleft, lowerright, upperleft, upperright)
-    nodes = map(lambda (a,b): ( (1-a)*(1-b), a*(1-b), (1-a)*b, a*b ), rxy)
+    nodes = map(lambda (a,b): ( (1-a)*(1-b), (1-a)*b, a*(1-b), a*b ), rxy)
 
     # get the values of the CO2 and random wind at the four closest nodes
     Vij = map(lambda matinds: map(lambda m: (randVel1[m], randVel2[m], CO2[m]),matinds),[ij,[(p,k+1) for (p,k) in ij],[(p+1,k) for (p,k) in ij], [(p+1,k+1) for (p,k) in ij]])
@@ -41,13 +41,13 @@ if __name__ == '__main__':
     mysim = nS.numericalSims()
     matsize = mysim.xg.shape
     # stub for testing, these values will be filled in during a simulation
-    randVel1 = 0.03*np.ones(matsize)
-    randVel2 = np.zeros(matsize)
+    randVel1 = 0.03*mysim.xg + 0.1
+    randVel2 = -0.02*mysim.yg
     CO2 = mysim.xg + mysim.yg 
     xy = [(48.32,5.02),(16.94,34.43),(69.50,90.98)]
     # exact values at these locations
-    ur_exact = [0.03, 0.03, 0.03]
-    vr_exact = [0.0, 0.0, 0.0]
+    ur_exact = [0.03*z[0] + 0.1 for z in xy]
+    vr_exact = [-0.02*z[1] for z in xy]
     c_exact = [z[0] + z[1] for z in xy] 
     # call interpolation functions
     ur,vr,c=interpFromGridWithMaps(xy,mysim.simsParams['h'],randVel1,randVel2,CO2)
