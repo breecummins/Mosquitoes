@@ -1,10 +1,5 @@
 import numpy as np
 
-    # stub for testing, these values will be filled in during a simulation
-    randVel1 = 
-    randVel2 = 
-    CO2 = 
-
 class numericalSims(object):
 
     def __init__(self,**kwargs):
@@ -18,7 +13,7 @@ class numericalSims(object):
         self.dimensionalParams = {'mosquitoFlightSpeed m/s':1.0}
         self.simsParams = {'domainLength':100.0,'numGridPoints':128}
         self.simsParams.update(kwargs)
-        derivedQuantities = {'h':self.simsParams.['domainLength']/self.simsParams['numGridPoints']}
+        derivedQuantities = {'h':self.simsParams['domainLength']/self.simsParams['numGridPoints']}
         self.simsParams.update(derivedQuantities)
         self._makeGrid(self.simsParams['h'],self.simsParams['domainLength'])
 
