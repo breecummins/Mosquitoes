@@ -1,5 +1,4 @@
 import numpy as np
-import environment
 
 class mosquitoPopulation(object):
 
@@ -37,17 +36,20 @@ class mosquitoPopulation(object):
 
     def _updatePosition(self,environment):
         '''
-        Move to new position.
+        Move to new position. 
+        environment is an object containing odor plume information.
         
         '''
-        u,v,CO2 = environment.getSignal(self.currentPosx,self.currentPosy)
-        self = self._respondToSignal(u,v,CO2)
+        mosqenv = environment.getSignal(self.currentPosx,self.currentPosy)
+        map(self._respondToSignal(),mosqenv) #mosqenv should be a list of tuples (U,CO2)
 
-    def _respondToSignal(self,u,v,CO2):
+    def _respondToSignal(self,mosqenv):
         '''
         Stub to be defined by subclass
 
         '''
+        U = mosqenv[0]
+        CO2 = mosqenv[1]
         return None
 
 
@@ -96,7 +98,7 @@ class klinotaxis(mosquitoPopulation):
             return True
         else:
             return False
-        
+
 
 
 class upwind(klinotaxis):
