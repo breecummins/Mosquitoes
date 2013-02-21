@@ -75,37 +75,34 @@ def interpFromGridSingleForLoop(xy,h,randVel1,randVel2,CO2):
 
     return ur,vr,c
 
-def interpFromGridNumpyArrays(xy,h,randVel1,randVel2,CO2):
+def interpFromGridNumpyArrays(x,y,h,randVel1,randVel2,CO2):
     '''
     This function interpolates values located at grid nodes to the 
     locations (x,y). 
-    xy is a list of (x,y) tuples. 
+    x, y are numpy arrays of positions in the x and y directions. 
     h is (scalar) grid spacing.
     randVel* and CO2 are velocity and CO2 values on the grid (np.array).
 
     '''
-    x = np.asarray([z[0] for z in xy])
-    y = np.asarray([z[1] for z in xy])
-
     # Find indices of the closest node to (x,y) TO THE LOWER LEFT assuming 
     # a cell-centered grid with lower left corner of the domain located at 
     # (0,0); i.e. lowest left-most grid point in the domain is (h/2, h/2).
     # Note that int always rounds toward zero.
-    i = np.int_(x/h - 0.5)
-    j = np.int_(y/h - 0.5)
-
+    i = (x/h - 0.5).astype('int')
+    j = (y/h - 0.5).astype('int')
+ 
     # find the remainders to do the interpolation
     rx = x/h - 0.5 - i
-    ry = y/h -0.5 - j
+    ry = y/h - 0.5 - j
         
     # Find the proportion of the value at each node that contributes to the 
     # interpolation at (x,y). nodes = (lowerleft, upperleft, lowerright, upperright)
-    nodes = np.asarray([(1-rx)*(1-ry), (1-rx)*ry, rx*(1-ry), rx*ry])
+    nodes = np.array([(1-rx)*(1-ry), (1-rx)*ry, rx*(1-ry), rx*ry])
 
     # get the values of the CO2 and random wind at the four closest nodes
-    V1 = np.asarray([randVel1[[i,j]],randVel1[[i,j+1]],randVel1[[i+1,j]],randVel1[[i+1,j+1]]]) 
-    V2 = np.asarray([randVel2[[i,j]],randVel2[[i,j+1]],randVel2[[i+1,j]],randVel2[[i+1,j+1]]]) 
-    C = np.asarray([CO2[[i,j]],CO2[[i,j+1]],CO2[[i+1,j]],CO2[[i+1,j+1]]])
+    V1 = np.array([randVel1[[i,j]],randVel1[[i,j+1]],randVel1[[i+1,j]],randVel1[[i+1,j+1]]]) 
+    V2 = np.array([randVel2[[i,j]],randVel2[[i,j+1]],randVel2[[i+1,j]],randVel2[[i+1,j+1]]]) 
+    C = np.array([CO2[[i,j]],CO2[[i,j+1]],CO2[[i+1,j]],CO2[[i+1,j+1]]])
 
     # perform the interpolation
     ur = np.sum(nodes*V1,0)

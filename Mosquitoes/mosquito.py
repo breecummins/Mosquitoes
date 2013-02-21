@@ -54,6 +54,9 @@ class mosquitoPopulation(object):
         self.currentPosx[~mosqsinplume] = self.currentPosx[~mosqsinplume] + dxw
         self.currentPosy[~mosqsinplume] = self.currentPosy[~mosqsinplume] + dyw
 
+    def _inPlume(self):
+        return self.currentCO2 >= self.mosqParams['CO2Thresh']
+
     def _respondInPlume(self,boolarray):
         '''
         Stub for subclass function
@@ -91,9 +94,6 @@ class mosquitoPopulation(object):
                 return (1.0+kappa*thresh)*(v - thresh)/(1.0+kappa*thresh*v*(1.0-thresh))
         return map(response,val)
 
-    def _inPlume(self):
-        return self.currentCO2 >= self.mosqParams['CO2Thresh']
-
 
 
 
@@ -108,7 +108,10 @@ class klinotaxis(mosquitoPopulation):
         # need dif sat, thresh, and kappa values
 
     def _respondInPlume(self,boolarray):
-        pass
+        #FIXME - stub
+        dx = None
+        dy = None
+        return dx, dy
 
 
 class upwind(klinotaxis):
@@ -124,7 +127,10 @@ class upwind(klinotaxis):
         self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
 
     def _respondWindOnly(self,boolarray):
-        pass
+        #FIXME - stub
+        dx = None
+        dy = None
+        return dx, dy
 
 
 
@@ -141,7 +147,10 @@ class downwind(klinotaxis):
         self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
 
     def _respondWindOnly(self,boolarray):
-        pass
+        #FIXME - stub
+        dx = None
+        dy = None
+        return dx, dy
 
 
 class crosswind(klinotaxis):
@@ -158,7 +167,10 @@ class crosswind(klinotaxis):
         self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
 
     def _respondWindOnly(self,boolarray):
-        pass
+        #FIXME - stub
+        dx = None
+        dy = None
+        return dx, dy
 
 
 
@@ -166,7 +178,7 @@ if __name__ == '__main__':
     
     mymosqs = mosquitoPopulation([1.0,2.0,3.0],windKappa=1.0,windThresh=0.01)
     responseStr = 'wind'
-    currentVal = [-1.e-12,0.1,1.0+1.e-12]
+    currentVal = np.array([-1.e-12,0.1,1.0+1.e-12])
     print(mymosqs._responseCurve(responseStr,currentVal))
     print(mymosqs.mosqParams)
     

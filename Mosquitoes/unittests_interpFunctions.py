@@ -21,7 +21,11 @@ def testaccuracy(xy):
     forlooperr=[[abs(ur[k]-ur_exact[k]) for k in range(len(xy))],[abs(vr[k]-vr_exact[k]) for k in range(len(xy))],[abs(c[k]-c_exact[k]) for k in range(len(xy))]]
     print('Error in for loop method:')
     print(max(max(forlooperr)))
-    ur,vr,c=iF.interpFromGridNumpyArrays(xy,mysim.simsParams['h'],randVel1,randVel2,CO2)
+    # List comprehension is tremendously faster than casting a list of tuples 
+    # straight to an array.
+    x = np.array([z[0] for z in xy]) 
+    y = np.array([z[1] for z in xy])
+    ur,vr,c=iF.interpFromGridNumpyArrays(x,y,mysim.simsParams['h'],randVel1,randVel2,CO2)
     nparrayerr=[[abs(ur[k]-ur_exact[k]) for k in range(len(xy))],[abs(vr[k]-vr_exact[k]) for k in range(len(xy))],[abs(c[k]-c_exact[k]) for k in range(len(xy))]]
     print('Error in numpy array method:')
     print(max(max(nparrayerr)))
