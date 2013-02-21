@@ -128,16 +128,14 @@ def interpFromGridListComp(xy,h,randVel1,randVel2,CO2):
     # (0,0); i.e. lowest left-most grid point in the domain is (h/2, h/2).
     # Note that int always rounds toward zero.
     # At the same time, find the remainders needed to do the interpolation
-    divxy = [(divmod(a[0],h),divmod(a[1],h)) for a in xy]
-    ij = [(int(d[0]-0.5),int(d[2]-0.5)) for d in divxy]
-    rxy = [(d[1]-0.5,d[3]-0.5) for d in divxy]
+    ijrxy = [(int(d[0][0]),int(d[1][0]),d[0][1]/h,d[1][1]/h) for d in [(divmod(a[0]-h/2.,h),divmod(a[1]-h/2.,h)) for a in xy]]
     
     # Find the proportion of the value at each node that contributes to the 
     # interpolation at (x,y). nodes = (lowerleft, upperleft, lowerright, upperright)
-    nodes = [( (1-rxy[k][0])*(1-rxy[k][1]), (1-rxy[k][0])*rxy[k][1], rxy[k][0]*(1-rxy[k][1]), rxy[k][0]*rxy[k][1] ) for k in len(rxy)]
+    nodes = [( (1-rxy[2])*(1-rxy[3]), (1-rxy[2])*rxy[3], rxy[2]*(1-rxy[3]), rxy[2]*rxy[3] ) for rxy in ijrxy]
 
     # get the values of the CO2 and random wind at the four closest nodes
-    Vij = [[(randVel1[m],randVel2[m],CO2[m]) for m in q] for q in [ij,[(p,k+1) for (p,k) in ij],[(p+1,k) for (p,k) in ij], [(p+1,k+1) for (p,k) in ij]]]
+    Vij = [[(randVel1[m],randVel2[m],CO2[m]) for m in q] for q in [[(p[0],p[1]) for p in ijrxy],[(p[0],p[1]+1) for p in ijrxy],[(p[0]+1,p[1]) for p in ijrxy], [(p[0]+1,p[1]+1) for p in ijrxy]]]
  
     def interpolate(ind):
         return [nodes[k][0]*Vij[0][k][ind] + nodes[k][1]*Vij[1][k][ind] + nodes[k][2]*Vij[2][k][ind] + nodes[k][3]*Vij[3][k][ind] for k in range(len(xy))]
