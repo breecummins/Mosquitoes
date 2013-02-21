@@ -25,6 +25,10 @@ def testaccuracy(xy):
     nparrayerr=[[abs(ur[k]-ur_exact[k]) for k in range(len(xy))],[abs(vr[k]-vr_exact[k]) for k in range(len(xy))],[abs(c[k]-c_exact[k]) for k in range(len(xy))]]
     print('Error in numpy array method:')
     print(max(max(nparrayerr)))
+    ur,vr,c=iF.interpFromGridListComp(xy,mysim.simsParams['h'],randVel1,randVel2,CO2)
+    listcomperr=[[abs(ur[k]-ur_exact[k]) for k in range(len(xy))],[abs(vr[k]-vr_exact[k]) for k in range(len(xy))],[abs(c[k]-c_exact[k]) for k in range(len(xy))]]
+    print('Error in list comp method:')
+    print(max(max(listcomperr)))
 
 def testspeed():
     '''

@@ -6,7 +6,7 @@ def interpFromGridWithMaps(xy,h,randVel1,randVel2,CO2):
     locations (x,y). 
     xy is a list of (x,y) tuples. 
     h is (scalar) grid spacing.
-    randVel* and CO2 are velocity and CO2 values on the grid.
+    randVel* and CO2 are velocity and CO2 values on the grid (np.array).
 
     '''
     # Find indices of the closest node to (x,y) TO THE LOWER LEFT assuming 
@@ -41,7 +41,7 @@ def interpFromGridSingleForLoop(xy,h,randVel1,randVel2,CO2):
     locations (x,y). 
     xy is a list of (x,y) tuples. 
     h is (scalar) grid spacing.
-    randVel* and CO2 are velocity and CO2 values on the grid.
+    randVel* and CO2 are velocity and CO2 values on the grid (np.array).
 
     '''
     def interpolate(ind):
@@ -81,7 +81,7 @@ def interpFromGridNumpyArrays(xy,h,randVel1,randVel2,CO2):
     locations (x,y). 
     xy is a list of (x,y) tuples. 
     h is (scalar) grid spacing.
-    randVel* and CO2 are velocity and CO2 values on the grid.
+    randVel* and CO2 are velocity and CO2 values on the grid (np.array).
 
     '''
     x = np.asarray([z[0] for z in xy])
@@ -114,3 +114,37 @@ def interpFromGridNumpyArrays(xy,h,randVel1,randVel2,CO2):
 
     return ur,vr,c
 
+def interpFromGridListComp(xy,h,randVel1,randVel2,CO2):
+    '''
+    This function interpolates values located at grid nodes to the 
+    locations (x,y). 
+    xy is a list of (x,y) tuples. 
+    h is (scalar) grid spacing.
+    randVel* and CO2 are velocity and CO2 values on the grid (list of lists).
+
+    '''
+    # Find indices of the closest node to (x,y) TO THE LOWER LEFT assuming 
+    # a cell-centered grid with lower left corner of the domain located at 
+    # (0,0); i.e. lowest left-most grid point in the domain is (h/2, h/2).
+    # Note that int always rounds toward zero.
+    # At the same time, find the remainders needed to do the interpolation
+    divxy = [(divmod(a[0],h),divmod(a[1],h)) for a in xy]
+    ij = [(int(d[0]-0.5),int(d[2]-0.5)) for d in divxy]
+    rxy = [(d[1]-0.5,d[3]-0.5) for d in divxy]
+    
+    # Find the proportion of the value at each node that contributes to the 
+    # interpolation at (x,y). nodes = (lowerleft, upperleft, lowerright, upperright)
+    nodes = [( (1-rxy[k][0])*(1-rxy[k][1]), (1-rxy[k][0])*rxy[k][1], rxy[k][0]*(1-rxy[k][1]), rxy[k][0]*rxy[k][1] ) for k in len(rxy)]
+
+    # get the values of the CO2 and random wind at the four closest nodes
+    Vij = [[(randVel1[m],randVel2[m],CO2[m]) for m in q] for q in [ij,[(p,k+1) for (p,k) in ij],[(p+1,k) for (p,k) in ij], [(p+1,k+1) for (p,k) in ij]]]
+ 
+    def interpolate(ind):
+        return [nodes[k][0]*Vij[0][k][ind] + nodes[k][1]*Vij[1][k][ind] + nodes[k][2]*Vij[2][k][ind] + nodes[k][3]*Vij[3][k][ind] for k in range(len(xy))]
+    
+    # perform the interpolation
+    ur = interpolate(0)
+    vr = interpolate(1)
+    c = interpolate(2)
+
+    return ur,vr,c
