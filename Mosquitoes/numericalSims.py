@@ -1,4 +1,5 @@
 import numpy as np
+from interpFunctions import interpFromGridNumpyArrays 
 
 class numericalSims(object):
 
@@ -20,4 +21,7 @@ class numericalSims(object):
 
     def _makeGrid(self,h,L):
         self.xg,self.yg = np.mgrid[h/2.0:L:h,h/2.0:L:h]
+
+    def interpFromGrid(self,xy,randVel1,randVel2,CO2):
+        ur, vr, c = interpFromGridNumpyArrays(xy,self.simsParams['h'],randVel1,randVel2,CO2)
 

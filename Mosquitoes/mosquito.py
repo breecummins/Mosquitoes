@@ -10,18 +10,21 @@ class mosquitoPopulation(object):
 
     '''
 
-    def __init__(self,initPos,**kwargs):
+    def __init__(self,initPosx,**kwargs):
         '''
-        initPos is a list of initial x positions of the mosquito population. 
+        initPosx is a numpy array of initial x positions of the mosquito population. 
         The length of the list is the number of mosquitoes in the population.
-        kwargs are optional arguments that may overwrite any of the default 
-        parameter values assigned below.
+        kwargs are optional keyword arguments that may overwrite any of the 
+        default parameter values assigned below.
 
         '''
-        self.initPos = initPos
-        self.currentPosx = initPos
-        self.currentPosy = None #must be assigned in plume finding subclass
-        self.numMosq = len(initPos)
+        self.initPosx = initPosx
+        self.currentPosx = initPosx
+        self.numMosq = len(initPosx)
+        # placeholders for subclass assignment
+        self.currentPosy = None
+        self.currentCO2 = None 
+        # construct parameter dictionary
         self.mosqParams = {'startTime':350.0,'decisionInterval':1.0,'hostRadius':5,
                     'CO2Thresh':0.01,'CO2Sat':1.0,'CO2Kappa':0.0,'spdMin':0.4,'spdMax':1.5,
                     'windThresh':0.0,'windSat':0.5,'windKappa':0.0,'windDirMin':np.pi/6,
@@ -34,45 +37,48 @@ class mosquitoPopulation(object):
         if self.mosqParams['CO2ScaledThresh'] != 0 and self.mosqParams['CO2Kappa'] <= -1.0/self.mosqParams['CO2ScaledThresh']:
             raise ValueError('CO2Kappa must be > -1.0 / %0.3f' %self.mosqParams['CO2ScaledThresh'])
 
-    def _updatePosition(self,environment):
+    def _updatePosition(self,environ,simulation):
         '''
-        Move to new position. 
-        environment is an object containing odor plume information.
+        environ is an object containing odor plume information, an instance of
+        class environment
+        simulation is an object containing numerical simulation information, an
+        instance of class numericalSims
         
         '''
-        mosqenv = environment.getSignal(self.currentPosx,self.currentPosy)
-        map(self._respondToSignal(),mosqenv) #mosqenv should be a list of tuples (U,CO2)
+        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
+        mosqsinplume = self._inPlume()
+        dx,dy = self._respondInPlume(mosqsinplume)
+        self.currentPosx[mosqsinplume] = self.currentPosx[mosqsinplume] + dx
+        self.currentPosy[mosqsinplume] = self.currentPosy[mosqsinplume] + dy
+        dxw,dyw = self._respondWindOnly(~mosqsinplume) 
+        self.currentPosx[~mosqsinplume] = self.currentPosx[~mosqsinplume] + dxw
+        self.currentPosy[~mosqsinplume] = self.currentPosy[~mosqsinplume] + dyw
 
-    def _respondToSignal(self,mosqenv):
+    def _respondInPlume(self,boolarray):
         '''
-        Stub to be defined by subclass
+        Stub for subclass function
 
         '''
-        U = mosqenv[0]
-        CO2 = mosqenv[1]
-        return None
+        pass
 
+    def _respondWindOnly(self,boolarray):
+        '''
+        Stub for subclass function
 
-class klinotaxis(mosquitoPopulation):
-    '''
-    Plume tracking using memory.
-
-    '''
-    def __init__(self,initPos,**kwargs):
-        mosquitoPopulation.__init__(initPos,**kwargs)
-        #need extra dict entries here
+        '''
+        pass
 
     def _responseCurve(self,responseStr,currentVal):
         '''
         This method determines strength of mosquito response to a signal.
         responseStr is the string that identifies which thresh, sat, and kappa 
         parameter set to use. Examples: 'CO2' or 'wind'.
-        currentVal is a list of the numerical values of the wind, CO2 etc. at 
-        the location of each mosquito.
+        currentVal is an array of the numerical values of the wind or CO2 etc. 
+        at the location of each mosquito.
 
         '''
         unscaledSat = self.mosqParams[responseStr+'Sat']
-        val = [v/unscaledSat for v in currentVal]
+        val = v/unscaledSat
         sat = 1.0
         kappa = self.mosqParams[responseStr+'Kappa']
         thresh = self.mosqParams[responseStr+'ScaledThresh']
@@ -85,30 +91,75 @@ class klinotaxis(mosquitoPopulation):
                 return (1.0+kappa*thresh)*(v - thresh)/(1.0+kappa*thresh*v*(1.0-thresh))
         return map(response,val)
 
-    def _inPlume(self,ind):
-        '''
-        Put in agent rules code.
+    def _inPlume(self):
+        return self.currentCO2 >= self.mosqParams['CO2Thresh']
 
-        This generator determines which mosquitoes are currently inside an odor
-        plume.
-        currentCO2 is the CO2 level at the current mosquito locations.
 
-        '''
-        if self.currentCO2[ind] >= self.mosqParams['CO2Thresh']:
-            return True
-        else:
-            return False
 
+
+class klinotaxis(mosquitoPopulation):
+    '''
+    Plume tracking using memory.
+
+    '''
+    def __init__(self,initPosx,**kwargs):
+        mosquitoPopulation.__init__(initPosx,**kwargs)
+        self.previousCO2 = np.zeros(size(initPosx))
+        # need dif sat, thresh, and kappa values
+
+    def _respondInPlume(self,boolarray):
+        pass
 
 
 class upwind(klinotaxis):
-    pass
+    def __init__(self,simulation,environ,initPosx,**kwargs):
+        '''
+        simulation is an instance of class numericalSims and environ is
+        an instance of class environment
+
+        '''
+        mosquitoPopulation.__init__(initPosx,**kwargs)
+        self.initPosy = simulation.simsParams['domainLength'] - simulation.simsParams['h']
+        self.currentPosy = self.initPosy*np.ones(initPosx.shape)
+        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
+
+    def _respondWindOnly(self,boolarray):
+        pass
+
+
 
 class downwind(klinotaxis):
-    pass
+    def __init__(self,simulation,environ,initPosx,**kwargs):
+        '''
+        simulation is an instance of class numericalSims and environ is
+        an instance of class environment
+
+        '''
+        mosquitoPopulation.__init__(initPosx,**kwargs)
+        self.initPosy = 0.0
+        self.currentPosy = np.zeros(initPosx.shape)
+        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
+
+    def _respondWindOnly(self,boolarray):
+        pass
+
 
 class crosswind(klinotaxis):
-    pass
+    def __init__(self,simulation,environ,initPosx,**kwargs):
+        '''
+        simulation is an instance of class numericalSims and environ is
+        an instance of class environment
+
+        '''
+        mosquitoPopulation.__init__(initPosx,**kwargs)
+        self.initPosy = 0.0
+        self.currentPosy = np.zeros(initPosx.shape)
+        self.crosswindDuration = None # placeholder for duration and direction
+        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
+
+    def _respondWindOnly(self,boolarray):
+        pass
+
 
 
 if __name__ == '__main__':

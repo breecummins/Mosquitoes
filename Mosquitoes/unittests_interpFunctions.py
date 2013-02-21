@@ -1,9 +1,8 @@
 import numericalSims as nS
 import interpFunctions as iF
+import numpy as np
 
-xy = [(48.32,5.02),(16.94,34.43),(69.50,90.98)]
-
-def testaccuracy():
+def testaccuracy(xy):
     mysim = nS.numericalSims()
     # bilinear/linear/affine functions should be recovered exactly
     randVel1 = 0.03*mysim.xg + 0.1
@@ -28,8 +27,20 @@ def testaccuracy():
     print(max(max(nparrayerr)))
 
 def testspeed():
-    pass
+    '''
+    To test speed, import cProfile and testspeed from this module into a python 
+    interpreter and do
+    cProfile.runctx('testspeed()',globals(),locals())
+
+    '''
+    for k in range(10):
+        x = 1+98*np.random.rand(10000)
+        y = 1+98*np.random.rand(10000)
+        xy = zip(x,y)
+        testaccuracy(xy)
+
 
 if __name__ == '__main__':
-    testaccuracy()
+    # xy = [(48.32,5.02),(16.94,34.43),(69.50,90.98)]
+    # testaccuracy(xy)
     testspeed()

@@ -1,30 +1,29 @@
 import numpy as np
-import numericalSims
+
+def constantVel(x,y,xmag=0.0,ymag=0.2):
+    return xmag*np.ones(x.shape), ymag*np.ones(y.shape)
 
 class environment(object):
     '''
     This class represents the environment in which the mosquitoes fly.
 
     '''
-    def __init__(self,velocityFunctionHandle=lambda x,y: (0,0.2)):
+    def __init__(self,velocityFunctionHandle=constantVel):
         self.velfunc = velocityFunctionHandle
-        self.randSeeds = map(int,203863451938475394857*np.random.rand(100000))
+        self.randSeeds = map(int,203863455938475394857*np.random.rand(100000))
+        # need host params
 
-    def getSignal(self,x,y,numericalSims):
+    def getSignal(self,x,y,simulation):
         '''
-        This function returns three lists: u,v,CO2 for every (x,y) pair. 
-        x and y are lists of the same length denoting position in 2D.
-        bottom, top, left, and right are the lower y, upper y, lower x, 
-        and upper x scalar values of the rectangular domain, respectively.
+        This function returns three arrays: u,v,CO2 for every (x,y) pair. 
+        x and y are arrays of the same length denoting position in 2D.
+        simulation is an instance of the numericalSims class.
 
         '''
         
-        # Get bulk flow wind 
-        U = map(self.velfunc,x,y)
-        #Can I avoid the unpacking? Should I just have lists of tuples all the time?
-    
-        # Get background CO2
-        CO2 = [0]*len(x)
+        # Get bulk flow wind and background CO2
+        u,v = self.velfunc(x,y)
+        CO2 = np.zeros(x.shape)
 
         # Get random velocities and CO2 inside domain
         # Assume domain is square with lower left corner at (0,0) and is cell-centered
@@ -35,13 +34,12 @@ class environment(object):
         ur,vr,c = self.interpFromGrid(ixy)  
 
         # Add interpolated values to bulk values
-        U = [(U[k][0]+ur[k],U[k][1]+vr[k]) for k in insideDom]       
-        CO2 = [CO2[k]+c[k] for k in insideDom]     
+        u[insideDom] = u[insideDom] + ur
+        v[insideDom] = v[insideDom] + vr       
+        CO2[insideDom] = CO2[insideDom] + c     
 
-        return U,CO2
+        return u,v,CO2
 
 
 if __name__ == '__main__':
-    myenv = environment()
-    mysim = numericalSims()
-    u,v,CO2 = myenv.getSignal(23.4,72.8,mysim)
+    pass
