@@ -30,8 +30,9 @@ class environment(object):
         L = numericalSims.simsParams['domainLength']
         h = numericalSims.simsParams['h']
         insideDom = [k for k in range(len(x)) if self.currentPosx[k] < (L-h/2.0) and self.currentPosx[k] > h/2.0 and self.currentPosy[k] < (L-h/2.0) and self.currentPosy[k] > h/2.0]
-        ixy = [(self.currentPosx[k],self.currentPosy[k]) for k in insideDom]
-        ur,vr,c = self.interpFromGrid(ixy)  
+        inx = [self.currentPosx[k] for k in insideDom]
+        iny = [self.currentPosy[k] for k in insideDom]
+        ur,vr,c = self.interpFromGrid(inx,iny)  
 
         # Add interpolated values to bulk values
         u[insideDom] = u[insideDom] + ur
