@@ -20,7 +20,6 @@ class mosquitoPopulation(object):
         '''
         self.initPosx = initPosx
         self.currentPosx = initPosx
-        self.numMosq = len(initPosx)
         # placeholders for subclass assignment
         self.currentPosy = None
         self.currentCO2 = None 
@@ -115,18 +114,24 @@ class klinotaxis(mosquitoPopulation):
         mosqSpeed = self._responseStrength('CO2',CO2)
         # calculate direction influenced by CO2
         diffCO2 = CO2 - self.previousCO2[boolarray]
-        mosqCO2window = self._responseStrength('diffCO2',np.abs(diffCO2))
-        mosqCO2dir = self.previousMotionDir + mosqCO2window*(-1.0 + 2.0*np.random.rand(len(CO2))
+        mosqCO2Window = self._responseStrength('diffCO2',np.abs(diffCO2))
+        mosqCO2dir = self.previousMotionDir + mosqCO2Window*(-1.0 + 2.0*np.random.rand(len(CO2))
         # correct direction if CO2 decreased
         lowerCO2 = diffCO2 < 0.0
         mosqCO2dir[lowerCO2] -= np.pi
         # update CO2 memory
-        self.previousCO2[boolarray] = self.currentCO2[boolarray]
+        self.previousCO2[boolarray] = CO2
         # calculate upwind component of motion
-        # FIXME - incomplete
-        dx = None
-        dy = None
+        U = self.currentU[boolarray]
+        V = self.currentV[boolarray]
+        velMag = np.sqrt(U**2 + V**2)
+        mosqWindWindow = self._responseStrength('wind',velMag)
+        mosqWindDir = np.pi + np.arctan2(V,U) + mosqWindWindow*(-1.0 + 2.0*np.random.rand(len(U)) # the pi term gives upwind flight
+        # Advection plus average CO2 and wind responses. 
+        dx = self.mosqParams['decisionInterval'] * (U + 0.5 * mosqSpeed * (np.cos(mosqCO2dir) + np.cos(mosqWindDir)))
+        dy = self.mosqParams['decisionInterval'] * (V + 0.5 * mosqSpeed * (np.sin(mosqCO2dir) + np.sin(mosqWindDir)))
         # update position memory
+        self.previousMotionDir[boolarray] = np.arctan2(dy,dx)
         return dx, dy
 
 
@@ -145,10 +150,19 @@ class upwind(klinotaxis):
         self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
 
     def _respondWindOnly(self,boolarray):
-        #FIXME - stub
-        spd = self.mosqParams['spdMax']
-        dx = None
-        dy = None
+        # calculate speed
+        mosqSpeed = self.mosqParams['spdMax']
+        # calculate direction
+        U = self.currentU[boolarray]
+        V = self.currentV[boolarray]
+        velMag = np.sqrt(U**2 + V**2)
+        mosqWindWindow = self._responseStrength('wind',velMag)
+        mosqWindDir = np.pi + np.arctan2(V,U) + mosqWindWindow*(-1.0 + 2.0*np.random.rand(len(U)) # the pi term gives upwind flight
+        # Advection plus wind response. 
+        dx = self.mosqParams['decisionInterval'] * (U + mosqSpeed*np.cos(mosqWindDir))
+        dy = self.mosqParams['decisionInterval'] * (V + mosqSpeed*np.sin(mosqWindDir))
+        # update position memory
+        self.previousMotionDir[boolarray] = np.arctan2(dy,dx)
         return dx, dy
 
 
@@ -160,17 +174,26 @@ class downwind(klinotaxis):
         an instance of class environment
 
         '''
-        klinotaxis.__init__(initPosx,**kwargs)
-        self.initPosy = 0.0
+         klinotaxis.__init__(initPosx,**kwargs)
+       self.initPosy = 0.0
         self.currentPosy = np.zeros(initPosx.shape)
         self.previousMotionDir = np.pi/2 * np.ones(initPosx.shape)   
         self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
 
     def _respondWindOnly(self,boolarray):
-        #FIXME - stub
-        spd = self.mosqParams['spdMax']
-        dx = None
-        dy = None
+        # calculate speed
+        mosqSpeed = self.mosqParams['spdMax']
+        # calculate direction
+        U = self.currentU[boolarray]
+        V = self.currentV[boolarray]
+        velMag = np.sqrt(U**2 + V**2)
+        mosqWindWindow = self._responseStrength('wind',velMag)
+        mosqWindDir = np.arctan2(V,U) + mosqWindWindow*(-1.0 + 2.0*np.random.rand(len(U)) 
+        # Advection plus wind response. 
+        dx = self.mosqParams['decisionInterval'] * (U + mosqSpeed*np.cos(mosqWindDir))
+        dy = self.mosqParams['decisionInterval'] * (V + mosqSpeed*np.sin(mosqWindDir))
+        # update position memory
+        self.previousMotionDir[boolarray] = np.arctan2(dy,dx)
         return dx, dy
 
 
@@ -187,12 +210,24 @@ class crosswind(klinotaxis):
         self.crosswindDuration = None # placeholder for duration and direction
         self.previousMotionDir = np.pi/2 * np.ones(initPosx.shape)   
         self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
+        #FIXME: add cw specific parameters
+        self.crosswindDirection = None #stub
 
     def _respondWindOnly(self,boolarray):
-        #FIXME - stub
-        spd = self.mosqParams['spdMax']
-        dx = None
-        dy = None
+        # calculate speed
+        mosqSpeed = self.mosqParams['spdMax']
+        # calculate direction
+        U = self.currentU[boolarray]
+        V = self.currentV[boolarray]
+        velMag = np.sqrt(U**2 + V**2)
+        mosqWindWindow = self._responseStrength('wind',velMag)
+        mosqWindDir = self.crosswindDirection*np.pi/2 + np.arctan2(V,U) + mosqWindWindow*(-1.0 + 2.0*np.random.rand(len(U)) 
+        # Advection plus wind response. 
+        dx = self.mosqParams['decisionInterval'] * (U + mosqSpeed*np.cos(mosqWindDir))
+        dy = self.mosqParams['decisionInterval'] * (V + mosqSpeed*np.sin(mosqWindDir))
+        # update memory
+        self.previousMotionDir[boolarray] = np.arctan2(dy,dx)
+        #FIXME: need to handle crosswind duration
         return dx, dy
 
 

@@ -8,7 +8,8 @@ class environment(object):
     This class represents the environment in which the mosquitoes fly.
 
     '''
-    def __init__(self,velocityFunctionHandle=constantVel):
+    def __init__(self,hostPositions,velocityFunctionHandle=constantVel):
+        self.hostPositions = hostPositions
         self.velfunc = velocityFunctionHandle
         self.randSeeds = map(int,203863455938475394857*np.random.rand(100000))
         # need host params
