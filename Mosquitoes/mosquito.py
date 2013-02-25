@@ -49,6 +49,7 @@ class mosquitoPopulation(object):
         dxw,dyw = self._respondWindOnly(~mosqsinplume) 
         self.currentPosx[~mosqsinplume] = self.currentPosx[~mosqsinplume] + dxw
         self.currentPosy[~mosqsinplume] = self.currentPosy[~mosqsinplume] + dyw
+        self._atHost()
 
     def _inPlume(self):
         return self.currentCO2 >= self.mosqParams['CO2Thresh']
@@ -91,6 +92,14 @@ class mosquitoPopulation(object):
             else:
                 return (1.0+kappa*thresh)*(v - thresh)/(1.0+kappa*thresh*v*(1.0-thresh))
         return np.array([fMax - (fMax-fMin)*response(v) for v in val])
+
+    def _atHost(self):
+        '''
+        Remove mosquitoes who found a host.
+
+        '''
+        #FIXME
+        pass
         
 
 class klinotaxis(mosquitoPopulation):
@@ -207,11 +216,17 @@ class crosswind(klinotaxis):
         klinotaxis.__init__(initPosx,**kwargs)
         self.initPosy = 0.0
         self.currentPosy = np.zeros(initPosx.shape)
-        self.crosswindDuration = None # placeholder for duration and direction
-        self.previousMotionDir = np.pi/2 * np.ones(initPosx.shape)   
         self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
-        #FIXME: add cw specific parameters
-        self.crosswindDirection = None #stub
+        #CW specific parameters
+        self.crosswindDuration = 5 + 4.999 * np.random.rand(len(initPosx)).astype(int)
+        self.crosswindDirection = np.array([-1.0 if np.random.rand() < 0.5 else 1.0 for _ in range(len(initPosx))])
+        self.previousMotionDir = np.pi/2 * self.crosswindDirection  
+
+    def _setDurationDirection(self):
+        boolarray = self.crosswindDuration == 0
+        self.crosswindDuration[boolarray] = 5 + 4.999 * np.random.rand(len(boolarray)).astype(int)
+        self.crosswindDirection[boolarray] = -1.0*self.crosswindDirection[boolarray]
+
 
     def _respondWindOnly(self,boolarray):
         # calculate speed
@@ -227,7 +242,8 @@ class crosswind(klinotaxis):
         dy = self.mosqParams['decisionInterval'] * (V + mosqSpeed*np.sin(mosqWindDir))
         # update memory
         self.previousMotionDir[boolarray] = np.arctan2(dy,dx)
-        #FIXME: need to handle crosswind duration
+        self.crosswindDuration[boolarray] = self.crosswindDuration[boolarray] - 1
+        self._setDurationDirection()
         return dx, dy
 
 
