@@ -47,18 +47,17 @@ def testspeed():
         xy = zip(x,y)
         testaccuracy(xy)
 
-def testextrap(x,y):
+def testextrap(x,y,mysim,s):
     '''
     In order to successfully run this test, make sure
-    that numGridPoints is much larger than the length
+    that the number of points in the grid is much larger than the length
     of x if x is generated randomly OR make sure that 
     the (x,y) points are well-separated so that no grid 
-    point is shared between two or more (x,y) points. 
+    point (mysim.xg, mysim.yg) is shared between two or more (x,y) points. 
     If that happens, the test will fail.
+    s is a list of length x that contains the values to extrapolate.
 
     '''
-    mysim = nS.numericalSims(numGridPoints=512)
-    s = np.random.rand(len(x))
     # call extrapolation functions and calculate error
     c=iF.extrapToGrid(x,y,s,mysim.simsParams['h'],mysim.xg.shape)
     i,j,nodes = iF.getIndicesNodesNumpyArrays(x,y,mysim.simsParams['h'])
@@ -104,6 +103,8 @@ if __name__ == '__main__':
     x = 1+98*np.random.rand(100)
     np.random.seed(48758)
     y = 1+98*np.random.rand(100)
+    mysim = nS.numericalSims(numGridPoints=512)
+    s = np.random.rand(len(x))  
     # x = np.array([x for (x,y) in xy])
     # y = np.array([y for (x,y) in xy])
-    testextrap(x,y)
+    testextrap(x,y,mysim,s)

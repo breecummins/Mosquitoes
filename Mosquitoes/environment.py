@@ -1,6 +1,10 @@
 import numpy as np
 
 def constantVel(x,y,xmag=0.0,ymag=0.2):
+    '''
+    Constant velocity needs to be slower than mosquito flight speed of 1.0 (nondimensional).
+
+    '''
     return xmag*np.ones(x.shape), ymag*np.ones(y.shape)
 
 def constantSourceStrength(dimParams,numHosts):

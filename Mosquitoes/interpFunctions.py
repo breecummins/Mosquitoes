@@ -166,10 +166,7 @@ def extrapToGrid(x,y,s,h,size):
  
     # calculate additional CO2 at each node
     sarray = np.zeros(size)
-    sarray[[i,j]] = nodes[0,:]*s
-    sarray[[i,j+1]] = nodes[1,:]*s
-    sarray[[i+1,j]] = nodes[2,:]*s
-    sarray[[i+1,j+1]] = nodes[3,:]*s
+    sarray[[i,i,i+1,i+1],[j,j+1,j,j+1]] = nodes*s 
  
     return sarray
 

@@ -93,7 +93,7 @@ class mosquitoPopulation(object):
                 return (1.0+kappa*thresh)*(v - thresh)/(1.0+kappa*thresh*v*(1.0-thresh))
         return np.array([fMax - (fMax-fMin)*response(v) for v in val])
 
-    def _atHost(self):
+    def _atHost(self,environ):
         '''
         Remove mosquitoes who found a host.
 

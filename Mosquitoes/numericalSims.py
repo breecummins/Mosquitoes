@@ -1,5 +1,6 @@
 import numpy as np
 from interpFunctions import interpFromGridNumpyArrays 
+from interpFunctions import extrapToGrid 
 
 class numericalSims(object):
 
@@ -25,11 +26,14 @@ class numericalSims(object):
     def interpFromGrid(self,xy,randVel1,randVel2,CO2):
         ur, vr, c = interpFromGridNumpyArrays(xy,self.simsParams['h'],randVel1,randVel2,CO2)
 
-    def _calcSourceTerm(self,environ):
-        # FIXME - retrieve source amount from environ and extrapolate to grid points
-        x = environ.hostPositionx
-        y = environ.hostPositiony
-        s = environ.hostSourceStrength
-        
+    def _addSourceTerm(self,environ,CO2):
+        cnew = extrapToGrid(environ.hostPositionx,environ.hostPositiony,environ.hostSourceStrength,self.simsParams['h'],CO2.shape)
+        return CO2+cnew
+
+    def _upwindScheme(self):
+        pass
+
+    def _implicitRK(self):
+        pass
 
 
