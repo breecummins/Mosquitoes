@@ -20,10 +20,11 @@ class mosquitoPopulation(object):
         '''
         self.initPosx = initPosx
         self.currentPosx = initPosx
+        self.results = {'whichhost':[],'finalPosx':[],'finalPosy':[],'flightTime':[]}
         # placeholders for subclass assignment
         self.currentPosy = None
         self.currentCO2 = None 
-        # construct parameter dictionary, CO2 associated with speed calculations
+        # construct parameter dictionary
         self.mosqParams = {'startTime':350.0,'decisionInterval':1.0,'hostRadius':5,'CO2Thresh':0.01,'CO2Sat':1.0,'CO2Kappa':0.0,'CO2WindowMin':0.4,'CO2WindowMax':1.5,'windThresh':0.0,'windSat':0.5,'windKappa':0.0,'windWindowMin':np.pi/6,'windWindowMax':np.pi/2}
         self.mosqParams.update(kwargs)
         self.mosqParams['windScaledThresh'] = self.mosqParams['windThresh']/self.mosqParams['windSat']
@@ -33,15 +34,13 @@ class mosquitoPopulation(object):
         if self.mosqParams['CO2ScaledThresh'] != 0 and self.mosqParams['CO2Kappa'] <= -1.0/self.mosqParams['CO2ScaledThresh']:
             raise ValueError('CO2Kappa must be > -1.0 / %0.3f' %self.mosqParams['CO2ScaledThresh'])
 
-    def updatePosition(self,environ,simulation):
+    def updatePosition(self,environ):
         '''
         environ is an object containing odor plume information, an instance of
         class environment
-        simulation is an object containing numerical simulation information, an
-        instance of class numericalSims
         
         '''
-        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
+        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy)
         mosqsinplume = self._inPlume()
         dx,dy = self._respondInPlume(mosqsinplume)
         self.currentPosx[mosqsinplume] = self.currentPosx[mosqsinplume] + dx
@@ -49,7 +48,7 @@ class mosquitoPopulation(object):
         dxw,dyw = self._respondWindOnly(~mosqsinplume) 
         self.currentPosx[~mosqsinplume] = self.currentPosx[~mosqsinplume] + dxw
         self.currentPosy[~mosqsinplume] = self.currentPosy[~mosqsinplume] + dyw
-        self._atHost()
+        self._atHost(environ)
 
     def _inPlume(self):
         return self.currentCO2 >= self.mosqParams['CO2Thresh']
@@ -59,15 +58,40 @@ class mosquitoPopulation(object):
         Stub for subclass function
 
         '''
-        pass
+        return None
 
     def _respondWindOnly(self,boolarray):
         '''
         Stub for subclass function
 
         '''
-        pass
+        return None
 
+    def _atHost(self,environ):
+        '''
+        Remove mosquitoes who found a host.
+
+        '''
+        xm = self.currentPosx
+        ym = self.currentPosy
+        stillinsim = []
+        for k in range(len(xm)):
+            dist = np.sqrt( (environ.hostPositionx - xm[k])**2 + (environ.hostPositiony - ym[k])**2 )
+            if np.all(dist >= self.hostRadius):
+                stillinsim.append(k)
+            else:
+                self.results['whichchicken'].append(np.nonzero(dist == np.min(dist)))
+                self.results['finalPosx'].append(xm[k])
+                self.results['finalPosy'].append(ym[k])
+                self.results['flightTime'].append(environ.currentTime - self.mosqParams['startTime'])
+        self._removeMosquitoes(stillinsim)
+
+    def _removeMosquitoes(self,stillinsim):
+        '''
+        Stub for subclass function.
+
+        '''
+        return None
 
     def _responseCurve(self,responseStr,currentVal):
         '''
@@ -93,12 +117,6 @@ class mosquitoPopulation(object):
                 return (1.0+kappa*thresh)*(v - thresh)/(1.0+kappa*thresh*v*(1.0-thresh))
         return np.array([fMax - (fMax-fMin)*response(v) for v in val])
 
-    def _atHost(self,environ):
-        '''
-        Remove mosquitoes who found a host.
-
-        '''
-        #FIXME
         
         
 
@@ -146,17 +164,16 @@ class klinotaxis(mosquitoPopulation):
 
 
 class upwind(klinotaxis):
-    def __init__(self,simulation,environ,initPosx,**kwargs):
+    def __init__(self,environ,initPosx,**kwargs):
         '''
-        simulation is an instance of class numericalSims and environ is
-        an instance of class environment
+        environ is an instance of class environment
 
         '''
         klinotaxis.__init__(initPosx,**kwargs)
-        self.initPosy = simulation.simsParams['domainLength'] - simulation.simsParams['h']
+        self.initPosy = environ.simsParams['domainLength'] - environ.simsParams['h']
         self.currentPosy = self.initPosy*np.ones(initPosx.shape)
         self.previousMotionDir = -np.pi/2 * np.ones(initPosx.shape)   
-        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
+        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy)
 
     def _respondWindOnly(self,boolarray):
         # calculate speed
@@ -174,20 +191,29 @@ class upwind(klinotaxis):
         self.previousMotionDir[boolarray] = np.arctan2(dy,dx)
         return dx, dy
 
+    def _removeMosquitoes(self,stillinsim):
+        self.currentPosx = self.currentPosx[stillinsim]
+        self.currentPosy = self.currentPosy[stillinsim]
+        self.previousMotionDir = self.previousMotionDir[stillinsim]
+        self.previousCO2 = self.previousCO2[stillinsim]
+
+    def _stopSimulation(self):
+        #FIXME
+        pass
+
 
 
 class downwind(klinotaxis):
-    def __init__(self,simulation,environ,initPosx,**kwargs):
+    def __init__(self,environ,initPosx,**kwargs):
         '''
-        simulation is an instance of class numericalSims and environ is
-        an instance of class environment
+       environ is an instance of class environment
 
         '''
-         klinotaxis.__init__(initPosx,**kwargs)
-       self.initPosy = 0.0
+        klinotaxis.__init__(initPosx,**kwargs)
+        self.initPosy = 0.0
         self.currentPosy = np.zeros(initPosx.shape)
         self.previousMotionDir = np.pi/2 * np.ones(initPosx.shape)   
-        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
+        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy)
 
     def _respondWindOnly(self,boolarray):
         # calculate speed
@@ -205,18 +231,28 @@ class downwind(klinotaxis):
         self.previousMotionDir[boolarray] = np.arctan2(dy,dx)
         return dx, dy
 
+    def _removeMosquitoes(self,stillinsim):
+        self.currentPosx = self.currentPosx[stillinsim]
+        self.currentPosy = self.currentPosy[stillinsim]
+        self.previousMotionDir = self.previousMotionDir[stillinsim]
+        self.previousCO2 = self.previousCO2[stillinsim]
+
+
+    def _stopSimulation(self):
+        #FIXME
+        pass
+
 
 class crosswind(klinotaxis):
-    def __init__(self,simulation,environ,initPosx,**kwargs):
+    def __init__(self,environ,initPosx,**kwargs):
         '''
-        simulation is an instance of class numericalSims and environ is
-        an instance of class environment
+       environ is an instance of class environment
 
         '''
         klinotaxis.__init__(initPosx,**kwargs)
         self.initPosy = 0.0
         self.currentPosy = np.zeros(initPosx.shape)
-        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy,simulation)
+        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy)
         #CW specific parameters
         self.crosswindDuration = 5 + 4.999 * np.random.rand(len(initPosx)).astype(int)
         self.crosswindDirection = np.array([-1.0 if np.random.rand() < 0.5 else 1.0 for _ in range(len(initPosx))])
@@ -245,6 +281,18 @@ class crosswind(klinotaxis):
         self.crosswindDuration[boolarray] = self.crosswindDuration[boolarray] - 1
         self._setDurationDirection()
         return dx, dy
+
+    def _removeMosquitoes(self,stillinsim):
+        self.currentPosx = self.currentPosx[stillinsim]
+        self.currentPosy = self.currentPosy[stillinsim]
+        self.previousMotionDir = self.previousMotionDir[stillinsim]
+        self.previousCO2 = self.previousCO2[stillinsim]
+        self.crosswindDuration = self.crosswindDuration[stillinsim]
+        self.crosswindDirection = self.crosswindDirection[stillinsim]
+
+    def _stopSimulation(self):
+        #FIXME
+        pass
 
 
 

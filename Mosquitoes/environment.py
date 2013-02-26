@@ -28,7 +28,7 @@ class environment(object):
 
     '''
 
-    def __init__(self,numericalSims,hostPositionx,hostPositiony,hostSourceHandle=constantSourceStrength,velocityFunctionHandle=constantVel,**kwargs):
+    def __init__(self,hostPositionx,hostPositiony,hostSourceHandle=constantSourceStrength,velocityFunctionHandle=constantVel,**kwargs):
         # host positions and params (add the other params)
         self.hostPositionx = hostPositionx #numpy array of x positions
         self.hostPositiony = hostPositiony #numpy array of y positions
@@ -43,14 +43,17 @@ class environment(object):
         self.simsParams.update(kwargs)
         derivedQuantities = {'h':self.simsParams['domainLength']/self.simsParams['numGridPoints']}
         self.simsParams.update(derivedQuantities)
+        # grid and grid quantities
         self.xg, self.yg = nMeth.makeGrid(self.simsParams['h'],self.simsParams['domainLength'])
+        self.CO2 = np.zeros(self.xg.shape)
+        self.randVel1 = np.zeros(self.xg.shape) 
+        self.randVel2 = np.zeros(self.xg.shape)
 
-    def getSignal(self,x,y,randVel1,randVel2,CO2):
+
+    def getSignal(self,x,y):
         '''
         This function returns three arrays: u,v,c for every (x,y) pair. 
         x and y are arrays of the same length denoting mosquito position in 2D.
-        randVel* and CO2 are the grid values for the random velocity components
-        and the CO2.
         
         '''       
         # Get bulk flow wind and background CO2
@@ -61,15 +64,17 @@ class environment(object):
         L = self.simsParams['domainLength']
         h = self.simsParams['h']
         insideDom = [k for k in range(len(x)) if x[k] < (L-h/2.0) and x[k] > h/2.0 and y[k] < (L-h/2.0) and y[k] > h/2.0]
-        ur,vr,ci = nMeth.interpFromGrid(x[insideDom],y[insideDom],self.simsParams['h'],randVel1,randVel2,CO2)  
+        ur,vr,ci = nMeth.interpFromGrid(x[insideDom],y[insideDom],self.simsParams['h'],self.randVel1,self.randVel2,self.CO2)  
         # Add interpolated values to bulk values
         u[insideDom] = u[insideDom] + ur
         v[insideDom] = v[insideDom] + vr       
         c[insideDom] = c[insideDom] + ci     
-        return u,v,CO2
+        return u,v,c
 
     def updateEnvironment(self):
+        #FIXME  
         pass
+
 
 
 if __name__ == '__main__':
