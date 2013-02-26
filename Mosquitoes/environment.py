@@ -3,13 +3,24 @@ import numpy as np
 def constantVel(x,y,xmag=0.0,ymag=0.2):
     return xmag*np.ones(x.shape), ymag*np.ones(y.shape)
 
+def constantSourceStrength(dimParams,numHosts):
+    '''
+    Constant CO2 emission per second from a chicken ((units CO2/unit air)/s) (Brackenbury 1982 notes): ~0.1 ml CO2 / ml air / min for 2 kg chicken.
+
+    '''
+    return np.array([(0.1/60)*(dimParams['mosquitoDecisionTime (s)']/dimParams['CO2Sat (units CO2/unit air or 10^6 ppm)'])]*numHosts)
+
+
+
 class environment(object):
     '''
     This class represents the environment in which the mosquitoes fly.
 
     '''
-    def __init__(self,hostPositions,velocityFunctionHandle=constantVel):
-        self.hostPositions = hostPositions
+    def __init__(self,numericalSims,hostPositionx,hostPositiony,hostSourceHandle=constantSourceStrength,velocityFunctionHandle=constantVel):
+        self.hostPositionx = hostPositionx #numpy array of x positions
+        self.hostPositiony = hostPositiony #numpy array of y positions
+        self.hostSourceStrength = hostSourceHandle(numericalSims.dimensionalParams,len(hostPositionx)) 
         self.velfunc = velocityFunctionHandle
         self.randSeeds = map(int,203863455938475394857*np.random.rand(100000))
         # need host params

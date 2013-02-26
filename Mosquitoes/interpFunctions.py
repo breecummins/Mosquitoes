@@ -75,41 +75,6 @@ def interpFromGridSingleForLoop(xy,h,randVel1,randVel2,CO2):
 
     return ur,vr,c
 
-def interpFromGridNumpyArrays(x,y,h,randVel1,randVel2,CO2):
-    '''
-    This function interpolates values located at grid nodes to the 
-    locations (x,y). 
-    x, y are numpy arrays of positions in the x and y directions. 
-    h is (scalar) grid spacing.
-    randVel* and CO2 are velocity and CO2 values on the grid (np.array).
-
-    '''
-    # Find indices of the closest node to (x,y) TO THE LOWER LEFT assuming 
-    # a cell-centered grid with lower left corner of the domain located at 
-    # (0,0); i.e. lowest left-most grid point in the domain is (h/2, h/2).
-    # Note that int always rounds toward zero.
-    i = (x/h - 0.5).astype('int')
-    j = (y/h - 0.5).astype('int')
- 
-    # find the remainders to do the interpolation
-    rx = x/h - 0.5 - i
-    ry = y/h - 0.5 - j
-        
-    # Find the proportion of the value at each node that contributes to the 
-    # interpolation at (x,y). nodes = (lowerleft, upperleft, lowerright, upperright)
-    nodes = np.array([(1-rx)*(1-ry), (1-rx)*ry, rx*(1-ry), rx*ry])
-
-    # get the values of the CO2 and random wind at the four closest nodes
-    V1 = np.array([randVel1[[i,j]],randVel1[[i,j+1]],randVel1[[i+1,j]],randVel1[[i+1,j+1]]]) 
-    V2 = np.array([randVel2[[i,j]],randVel2[[i,j+1]],randVel2[[i+1,j]],randVel2[[i+1,j+1]]]) 
-    C = np.array([CO2[[i,j]],CO2[[i,j+1]],CO2[[i+1,j]],CO2[[i+1,j+1]]])
-
-    # perform the interpolation
-    ur = np.sum(nodes*V1,0)
-    vr = np.sum(nodes*V2,0)
-    c = np.sum(nodes*C,0)
-
-    return ur,vr,c
 
 def interpFromGridListComp(xy,h,randVel1,randVel2,CO2):
     '''
@@ -143,3 +108,68 @@ def interpFromGridListComp(xy,h,randVel1,randVel2,CO2):
     c = interpolate(2)
 
     return ur,vr,c
+
+def getIndicesNodesNumpyArrays(x,y,h):
+    # Find indices of the closest node to (x,y) TO THE LOWER LEFT assuming 
+    # a cell-centered grid with lower left corner of the domain located at 
+    # (0,0); i.e. lowest left-most grid point in the domain is (h/2, h/2).
+    # Note that int always rounds toward zero.
+    i = (x/h - 0.5).astype('int')
+    j = (y/h - 0.5).astype('int')
+ 
+    # find the remainders to do the interpolation
+    rx = x/h - 0.5 - i
+    ry = y/h - 0.5 - j
+        
+    # Find the proportion of the value at each node that contributes to the 
+    # interpolation at (x,y). nodes = (lowerleft, upperleft, lowerright, upperright)
+    nodes = np.array([(1-rx)*(1-ry), (1-rx)*ry, rx*(1-ry), rx*ry])
+
+    return i,j,nodes
+
+def interpFromGridNumpyArrays(x,y,h,randVel1,randVel2,CO2):
+    '''
+    This function interpolates values located at grid nodes to the 
+    locations (x,y). 
+    x, y are numpy arrays of positions in the x and y directions. 
+    h is (scalar) grid spacing.
+    randVel* and CO2 are velocity and CO2 values on the grid (np.array).
+
+    '''
+    # get indices and proportional values
+    i,j,nodes = getIndicesNodesNumpyArrays(x,y,h)
+
+    # get the values of the CO2 and random wind at the four closest nodes
+    V1 = np.array([randVel1[[i,j]],randVel1[[i,j+1]],randVel1[[i+1,j]],randVel1[[i+1,j+1]]]) 
+    V2 = np.array([randVel2[[i,j]],randVel2[[i,j+1]],randVel2[[i+1,j]],randVel2[[i+1,j+1]]]) 
+    C = np.array([CO2[[i,j]],CO2[[i,j+1]],CO2[[i+1,j]],CO2[[i+1,j+1]]])
+
+    # perform the interpolation
+    ur = np.sum(nodes*V1,0)
+    vr = np.sum(nodes*V2,0)
+    c = np.sum(nodes*C,0)
+
+    return ur,vr,c
+
+def extrapToGrid(x,y,s,h,size):
+    '''
+    This function extrapolates the host CO2 (s) located at (x,y) to the 
+    closest 4 grid nodes. 
+    x, y are numpy arrays of positions in the x and y directions. 
+    s is a numpy array of the host CO2 values at (x,y).
+    h is (scalar) grid spacing.
+    size is the size of the 2D computational grid (tuple).
+
+    '''
+    # get indices and proportional values
+    i,j,nodes = getIndicesNodesNumpyArrays(x,y,h)
+ 
+    # calculate additional CO2 at each node
+    sarray = np.zeros(size)
+    sarray[[i,j]] = nodes[0,:]*s
+    sarray[[i,j+1]] = nodes[1,:]*s
+    sarray[[i+1,j]] = nodes[2,:]*s
+    sarray[[i+1,j+1]] = nodes[3,:]*s
+ 
+    return sarray
+

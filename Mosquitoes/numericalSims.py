@@ -11,7 +11,7 @@ class numericalSims(object):
         for the interpolation function interpFromGrid to work properly.
 
         '''
-        self.dimensionalParams = {'mosquitoFlightSpeed (m/s)':1.0,'mosquitoDecisionTime (s)': 0.1}
+        self.dimensionalParams = {'mosquitoFlightSpeed (m/s)':1.0,'mosquitoDecisionTime (s)': 0.1,'CO2Sat (units CO2/unit air or 10^6 ppm)':4.e-3}
         self.simsParams = {'domainLength':100.0,'numGridPoints':128}
         self.simsParams.update(kwargs)
         derivedQuantities = {'h':self.simsParams['domainLength']/self.simsParams['numGridPoints']}
@@ -26,6 +26,10 @@ class numericalSims(object):
         ur, vr, c = interpFromGridNumpyArrays(xy,self.simsParams['h'],randVel1,randVel2,CO2)
 
     def _calcSourceTerm(self,environ):
-        hostPositions = environ.hostPositions
-        # FIXME - extrapolate to grid points, retrieve source amount from environ
+        # FIXME - retrieve source amount from environ and extrapolate to grid points
+        x = environ.hostPositionx
+        y = environ.hostPositiony
+        s = environ.hostSourceStrength
+        
+
 

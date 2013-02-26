@@ -99,7 +99,7 @@ class mosquitoPopulation(object):
 
         '''
         #FIXME
-        pass
+        
         
 
 class klinotaxis(mosquitoPopulation):
