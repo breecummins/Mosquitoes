@@ -33,7 +33,7 @@ class mosquitoPopulation(object):
         if self.mosqParams['CO2ScaledThresh'] != 0 and self.mosqParams['CO2Kappa'] <= -1.0/self.mosqParams['CO2ScaledThresh']:
             raise ValueError('CO2Kappa must be > -1.0 / %0.3f' %self.mosqParams['CO2ScaledThresh'])
 
-    def _updatePosition(self,environ,simulation):
+    def updatePosition(self,environ,simulation):
         '''
         environ is an object containing odor plume information, an instance of
         class environment
