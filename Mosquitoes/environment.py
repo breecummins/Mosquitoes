@@ -46,7 +46,7 @@ class environment(object):
         # single mosquito flight
         self.simsParams = {'domainLength':100.0,'numGridPoints':128,'initialTime':0.0,'finalTime':5000.0,'dt':1.0/10,'randVelSwitch':20.0}
         self.simsParams.update(kwargs)
-        derivedQuantities = {'h':self.simsParams['domainLength']/self.simsParams['numGridPoints'],'numRandVelTimeSteps':self.simsParams['randVelSwitch']/self.simsParams['dt']}
+        derivedQuantities = {'h':self.simsParams['domainLength']/self.simsParams['numGridPoints']}
         self.simsParams.update(derivedQuantities)
         # grid and grid quantities
         self.xg, self.yg = nMeth.makeGrid(self.simsParams['h'],self.simsParams['domainLength'])
@@ -69,8 +69,7 @@ class environment(object):
         self.randVel1np1 = self.randVelMag*np.random.randn(self.simsParams['numGridPoints'],self.simsParams['numGridPoints'])
         self.randVel2np1 = self.randVelMag*np.random.randn(self.simsParams['numGridPoints'],self.simsParams['numGridPoints'])
 
-    def _continuousRandVel(self,timestep):
-        ratio = timestep / self.simsParams['numRandVelTimeSteps']
+    def _continuousRandVel(self,ratio):
         self.randVel1 = self.randVel1n + ratio * (self.randVel1np1 - self.randVel1n)
         self.randVel2 = self.randVel2n + ratio * (self.randVel2np1 - self.randVel2n)
         
@@ -98,19 +97,25 @@ class environment(object):
     def updateEnvironment(self,currentTime):
         self.CO2 = nMeth.explicitRK4(currentTime,self.CO2,self.simsParams['dt'],self._updateCO2HeavisideRandVel)
 
-    def _updateCO2HeavisideRandVel(self,t,CO2):
-        ind,rem = divmod(t,self.simsParams['randVelSwitch'])
-        if rem < self.simsParams['dt']/2:
-            self._setHeavisideRandVel(ind)
+    def _updateCO2HeavisideRandVel(self,t,CO2,rkstep):
+        if rkstep == 1:
+            ind,rem = divmod(t,self.simsParams['randVelSwitch'])
+            if rem < self.simsParams['dt']/10.:
+                self._setHeavisideRandVel(ind)
+            elif rem > (self.simsParams['randVelSwitch'] - 1.1*self.simsParams['dt']):
+                self._setContinuousRandVel(ind)
+        #FIXME: hmmm, hard to handle special cases with rk4       
         #FIXME: do upwind scheme
         #add self.constantSource to the velocity term
 
-    def _updateCO2ContinuousRandVel(self,t,CO2):
+    def _updateCO2ContinuousRandVel(self,t,CO2,rkstep):
         ind,rem = divmod(t,self.simsParams['randVelSwitch'])
-        if rem < self.simsParams['dt']/2:
+        if rkstep == 1 and rem < self.simsParams['dt']/10.:
             self._setContinuousRandVel(ind)
-        timestep,_ = divmod(rem,self.simsParams['dt'])
-        self._continuousRandVel(timestep)
+        ratio = rem/self.simsParams['randVelSwitch']
+        self._continuousRandVel(ratio)
+        U = self.constantU + self.randVel1
+        V = self.constantV + self.randVel2
         #FIXME: do upwind scheme
         #add self.constantSource to the velocity term
 
