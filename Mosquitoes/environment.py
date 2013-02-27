@@ -39,7 +39,12 @@ class environment(object):
         # dimensional parameters to interpret results (code is nondimensional)
         self.dimensionalParams = {'mosquitoFlightSpeed (m/s)':1.0,'mosquitoDecisionTime (s)': 0.1,'CO2Sat (units CO2/unit air or 10^6 ppm)':4.e-3}
         # numerical parameters for the simulation, may be overwritten with kwargs
-        self.simsParams = {'domainLength':100.0,'numGridPoints':128}
+        # dt must be 1.0/N where N is an integer, so that the mosquito decisions 
+        # occurring every 1.0 happen at a time step boundary.
+        # finalTime must be long enough to allow all crosswind mosquitoes to find a host.
+        # numGridPoints must be chosen so that grid spacing is on the order of a 
+        # single mosquito flight
+        self.simsParams = {'domainLength':100.0,'numGridPoints':128,'initialTime':0.0,'finalTime':5000.0,'dt':1.0/10}
         self.simsParams.update(kwargs)
         derivedQuantities = {'h':self.simsParams['domainLength']/self.simsParams['numGridPoints']}
         self.simsParams.update(derivedQuantities)
@@ -49,6 +54,9 @@ class environment(object):
         self.randVel1 = np.zeros(self.xg.shape) 
         self.randVel2 = np.zeros(self.xg.shape)
 
+    def _setRandomVel(self):
+        #FIXME
+        pass
 
     def getSignal(self,x,y):
         '''

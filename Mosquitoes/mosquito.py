@@ -21,9 +21,8 @@ class mosquitoPopulation(object):
         self.initPosx = initPosx
         self.currentPosx = initPosx
         self.results = {'whichhost':[],'finalPosx':[],'finalPosy':[],'flightTime':[]}
-        # placeholders for subclass assignment
+        # placeholder for subclass assignment
         self.currentPosy = None
-        self.currentCO2 = None 
         # construct parameter dictionary
         self.mosqParams = {'startTime':350.0,'decisionInterval':1.0,'hostRadius':5,'CO2Thresh':0.01,'CO2Sat':1.0,'CO2Kappa':0.0,'CO2WindowMin':0.4,'CO2WindowMax':1.5,'windThresh':0.0,'windSat':0.5,'windKappa':0.0,'windWindowMin':np.pi/6,'windWindowMax':np.pi/2}
         self.mosqParams.update(kwargs)
@@ -34,24 +33,21 @@ class mosquitoPopulation(object):
         if self.mosqParams['CO2ScaledThresh'] != 0 and self.mosqParams['CO2Kappa'] <= -1.0/self.mosqParams['CO2ScaledThresh']:
             raise ValueError('CO2Kappa must be > -1.0 / %0.3f' %self.mosqParams['CO2ScaledThresh'])
 
-    def updatePosition(self,environ):
+    def updatePosition(self,environ,currentTime):
         '''
         environ is an object containing odor plume information, an instance of
         class environment
         
         '''
         self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy)
-        mosqsinplume = self._inPlume()
+        mosqsinplume = self.currentCO2 >= self.mosqParams['CO2Thresh']
         dx,dy = self._respondInPlume(mosqsinplume)
         self.currentPosx[mosqsinplume] = self.currentPosx[mosqsinplume] + dx
         self.currentPosy[mosqsinplume] = self.currentPosy[mosqsinplume] + dy
         dxw,dyw = self._respondWindOnly(~mosqsinplume) 
         self.currentPosx[~mosqsinplume] = self.currentPosx[~mosqsinplume] + dxw
         self.currentPosy[~mosqsinplume] = self.currentPosy[~mosqsinplume] + dyw
-        self._atHost(environ)
-
-    def _inPlume(self):
-        return self.currentCO2 >= self.mosqParams['CO2Thresh']
+        self._atHost(environ,currentTime)
 
     def _respondInPlume(self,boolarray):
         '''
@@ -67,7 +63,7 @@ class mosquitoPopulation(object):
         '''
         return None
 
-    def _atHost(self,environ):
+    def _atHost(self,environ,currentTime):
         '''
         Remove mosquitoes who found a host.
 
@@ -83,7 +79,7 @@ class mosquitoPopulation(object):
                 self.results['whichchicken'].append(np.nonzero(dist == np.min(dist)))
                 self.results['finalPosx'].append(xm[k])
                 self.results['finalPosy'].append(ym[k])
-                self.results['flightTime'].append(environ.currentTime - self.mosqParams['startTime'])
+                self.results['flightTime'].append(currentTime - self.mosqParams['startTime'])
         self._removeMosquitoes(stillinsim)
 
     def _removeMosquitoes(self,stillinsim):
@@ -197,9 +193,12 @@ class upwind(klinotaxis):
         self.previousMotionDir = self.previousMotionDir[stillinsim]
         self.previousCO2 = self.previousCO2[stillinsim]
 
-    def _stopSimulation(self):
-        #FIXME
-        pass
+    def stopSimulation(self,environ):
+        # argument environ is here for consistent API
+        if np.any(self.currentPosy > 0.0):
+            return False
+        else:
+            return True
 
 
 
@@ -238,9 +237,11 @@ class downwind(klinotaxis):
         self.previousCO2 = self.previousCO2[stillinsim]
 
 
-    def _stopSimulation(self):
-        #FIXME
-        pass
+    def stopSimulation(self,environ):
+        if np.any(self.currentPosy < environ.simsParams['domainLength']+5*environ.simsParams['h']):
+            return False
+        else:
+            return True
 
 
 class crosswind(klinotaxis):
@@ -290,9 +291,11 @@ class crosswind(klinotaxis):
         self.crosswindDuration = self.crosswindDuration[stillinsim]
         self.crosswindDirection = self.crosswindDirection[stillinsim]
 
-    def _stopSimulation(self):
-        #FIXME
-        pass
+    def stopSimulation(self,environ):
+        if np.any(self.currentPosy < environ.simsParams['domainLength']+5*environ.simsParams['h']):
+            return False
+        else:
+            return True
 
 
 
