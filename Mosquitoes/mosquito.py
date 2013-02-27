@@ -39,7 +39,7 @@ class mosquitoPopulation(object):
         class environment
         
         '''
-        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy)
+        self.currentU,self.currentV,self.currentCO2 = environ.querySignal(self.currentPosx,self.currentPosy)
         mosqsinplume = self.currentCO2 >= self.mosqParams['CO2Thresh']
         dx,dy = self._respondInPlume(mosqsinplume)
         self.currentPosx[mosqsinplume] = self.currentPosx[mosqsinplume] + dx
@@ -169,7 +169,7 @@ class upwind(klinotaxis):
         self.initPosy = environ.simsParams['domainLength'] - environ.simsParams['h']
         self.currentPosy = self.initPosy*np.ones(initPosx.shape)
         self.previousMotionDir = -np.pi/2 * np.ones(initPosx.shape)   
-        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy)
+        self.currentU,self.currentV,self.currentCO2 = environ.querySignal(self.currentPosx,self.currentPosy)
 
     def _respondWindOnly(self,boolarray):
         # calculate speed
@@ -212,7 +212,7 @@ class downwind(klinotaxis):
         self.initPosy = 0.0
         self.currentPosy = np.zeros(initPosx.shape)
         self.previousMotionDir = np.pi/2 * np.ones(initPosx.shape)   
-        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy)
+        self.currentU,self.currentV,self.currentCO2 = environ.querySignal(self.currentPosx,self.currentPosy)
 
     def _respondWindOnly(self,boolarray):
         # calculate speed
@@ -253,7 +253,7 @@ class crosswind(klinotaxis):
         klinotaxis.__init__(initPosx,**kwargs)
         self.initPosy = 0.0
         self.currentPosy = np.zeros(initPosx.shape)
-        self.currentU,self.currentV,self.currentCO2 = environ.getSignal(self.currentPosx,self.currentPosy)
+        self.currentU,self.currentV,self.currentCO2 = environ.querySignal(self.currentPosx,self.currentPosy)
         #CW specific parameters
         self.crosswindDuration = 5 + 4.999 * np.random.rand(len(initPosx)).astype(int)
         self.crosswindDirection = np.array([-1.0 if np.random.rand() < 0.5 else 1.0 for _ in range(len(initPosx))])

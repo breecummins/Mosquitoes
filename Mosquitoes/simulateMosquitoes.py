@@ -24,7 +24,7 @@ dt = environ.simsParams['dt']
 
 for t in np.arange(environ.simsParams['initialTime'],environ.simsParams['finalTime'],dt):
 
-    environ.updateEnvironment()
+    environ.updateEnvironment(t)
     if t%1.0 < dt/2.0:
         mosqUpwindPop.updatePosition(environ,t)
         mosqDownwindPop.updatePosition(environ,t)

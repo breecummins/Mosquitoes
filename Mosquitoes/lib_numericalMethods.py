@@ -67,21 +67,20 @@ def extrapToGrid(x,y,s,h,size):
     sarray[[i,i,i+1,i+1],[j,j+1,j,j+1]] = nodes*s 
      return sarray
 
-def addSourceTerm(environ,CO2):
-    '''
-    Extrapolate exhaled CO2 to grid and add it to current CO2.
-
-    '''
-    cnew = extrapToGrid(environ.hostPositionx,environ.hostPositiony,environ.hostSourceStrength,simsParams['h'],CO2.shape)
-    return CO2+cnew
-
-def upwindScheme():
-    pass
-
 def implicitRK():
     pass
 
-def explicitRK():
-    pass
+def explicitRK4(ti,yi,dt,func):
+    # 4th order Runge-Kutta solver; func takes args ti (scalar time), 
+    # and yi (vector values at time ti) 
+    # dt is time step
+    k1 = h*func(ti,yi)
+    k2 = h*func(ti+0.5*h, yi+0.5*k1)
+    k3 = h*func(ti+0.5*h, yi+0.5*k2)
+    k4 = h*func(ti+h, yi+k3)
+    return yi + (k1 + 2*k2 + 2*k3 + k4)/6.0
 
+def upwindScheme():
+    #FIXME
+    pass
 
