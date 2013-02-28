@@ -80,7 +80,46 @@ def explicitRK4(ti,yi,dt,func):
     k4 = h*func(ti+h, yi+k3)
     return yi + (k1 + 2*k2 + 2*k3 + k4)/6.0
 
-def upwindScheme():
-    #FIXME
-    pass
+def upwindScheme(U,V,environ):
+    CO2 = environ.CO2
+    # add ghost cells to velocity arrays
+    uxm = np.vstack([environ.leftedge,U[:-1,:]])
+    uxp = np.vstack([U[1:,:],environ.rightedge])
+    vxm = np.hstack([environ.bottomedge,V[:,:-1]])
+    vxp = np.hstack([V[:,1:],environ.topedge])
+    # find values at cell edges
+    um = 0.5*(U+uxm)
+    up = 0.5*(U+uxp)
+    vm = 0.5*(V+vxm)
+    vp = 0.5*(V+vxp)
+    # find wind direction on cell edges
+    bool_upp = (up > 0).astype('int')
+    bool_upm = (up <= 0).astype('int')
+    bool_ump = (um > 0).astype('int')
+    bool_umm = (um <= 0).astype('int')
+    bool_vpp = (vp > 0).astype('int')
+    bool_vpm = (vp <= 0).astype('int')
+    bool_vmp = (vm > 0).astype('int')
+    bool_vmm = (vm <= 0).astype('int')            
+    # find locations for outflow bcs
+    leftind = np.nonzero(um[0,:] < 0)
+    rightind = np.nonzero(up[-1,:] > 0)
+    bottomind = np.nonzero(vm[:,0] < 0)
+    topind = np.nonzero(vp[:,-1] > 0)
+    # add ghost cells to CO2 array and adjust for outflow bcs
+    z = np.zeros(environ.simsParams['numGridPoints'])
+    Cxm = np.vstack([z,CO2[:-1,:]])
+    Cxp = np.vstack([CO2[1:,:],z])
+    Cym = np.hstack([z[:,np.newaxis],CO2[:,:-1]])
+    Cyp = np.hstack([CO2[:,1:],z[:,np.newaxis]])
+    Cxm[0,leftind] = 2*CO2[0,leftind] - CO2[1,leftind]
+    Cxp[-1,rightind] = 2*CO2[-1,rightind] - CO2[-2,rightind]
+    Cym[bottomind,0] = 2*CO2[bottomind,0] - CO2[bottomind,1]
+    Cyp[topind,-1] = 2*CO2[topind,-1] - CO2[topind,-2]
+    # calculate flux term using upwinding scheme
+    Flxx=(CO2*bool_upp + Cxp*bool_upm)*up - (Cxm*bool_ump + CO2*bool_umm)*um
+    Flxy=(CO2*bool_vpp + Cyp*bool_vpm)*vp - (Cym*bool_vmp + CO2*bool_vmm)*vm
+    A = (Flxx+Flxy)/environ.simsParams['h']
+ 
 
+    #FIXME

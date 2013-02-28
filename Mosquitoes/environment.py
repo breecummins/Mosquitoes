@@ -46,17 +46,30 @@ class environment(object):
         # single mosquito flight
         self.simsParams = {'domainLength':100.0,'numGridPoints':128,'initialTime':0.0,'finalTime':5000.0,'dt':1.0/10,'randVelSwitch':20.0}
         self.simsParams.update(kwargs)
-        derivedQuantities = {'h':self.simsParams['domainLength']/self.simsParams['numGridPoints']}
+        h = self.simsParams['domainLength']/self.simsParams['numGridPoints']
+        derivedQuantities = {'h':h}
         self.simsParams.update(derivedQuantities)
         # grid and grid quantities
-        self.xg, self.yg = nMeth.makeGrid(self.simsParams['h'],self.simsParams['domainLength'])
+        self.xg, self.yg = nMeth.makeGrid(h,self.simsParams['domainLength'])
         self.CO2 = np.zeros(self.xg.shape)
         self.randVel1 = np.zeros(self.xg.shape) 
         self.randVel2 = np.zeros(self.xg.shape)
-        self.constantU, self.constantV = self.velfunc(self.xg,self.yg) #will have to be changed for time dependent velocity
-        self.constantSource = nMeth.extrapToGrid(self.hostPositionx,self.hostPositiony,self.hostSourceStrength,self.simsParams['h'],self.xg.shape) #will have to change for space or time dependent host breathing
+        # The following velocity arrays will have to be changed for 
+        # time dependent velocity
+        self.constantU, self.constantV = self.velfunc(self.xg,self.yg) 
+        self.leftedge = self.velfunc(self.xg[0,:]-h,self.yg[0,:])
+        self.rightedge = self.velfunc(self.xg[-1,:]+h,self.yg[-1,:])
+        self.bottomedge = self.velfunc(self.xg[:,0],self.yg[:,0]-h)
+        self.rightedge = self.velfunc(self.xg[:,-1],self.yg[:,-1]+h)
+        # The following array will have to change for space or time dependent 
+        # host breathing
+        self.constantSource = nMeth.extrapToGrid(self.hostPositionx,self.hostPositiony,self.hostSourceStrength,h,self.xg.shape) 
 
     def _setHeavisideRandVel(self,ind):
+        '''
+        For use only with Euler method.
+
+        '''
         np.random.seed(self.randSeeds[ind])
         self.randVel1 = self.randVelMag*np.random.randn(self.simsParams['numGridPoints'],self.simsParams['numGridPoints'])
         self.randVel2 = self.randVelMag*np.random.randn(self.simsParams['numGridPoints'],self.simsParams['numGridPoints'])
@@ -72,7 +85,7 @@ class environment(object):
     def _continuousRandVel(self,ratio):
         self.randVel1 = self.randVel1n + ratio * (self.randVel1np1 - self.randVel1n)
         self.randVel2 = self.randVel2n + ratio * (self.randVel2np1 - self.randVel2n)
-        
+
     def querySignal(self,x,y):
         '''
         This function returns three arrays: u,v,c for every (x,y) pair. 
@@ -97,23 +110,31 @@ class environment(object):
     def updateEnvironment(self,currentTime):
         self.CO2 = nMeth.explicitRK4(currentTime,self.CO2,self.simsParams['dt'],self._updateCO2HeavisideRandVel)
 
-    def _updateCO2HeavisideRandVel(self,t,CO2,rkstep):
-        if rkstep == 1:
-            ind,rem = divmod(t,self.simsParams['randVelSwitch'])
-            if rem < self.simsParams['dt']/10.:
-                self._setHeavisideRandVel(ind)
-            elif rem > (self.simsParams['randVelSwitch'] - 1.1*self.simsParams['dt']):
-                self._setContinuousRandVel(ind)
-        #FIXME: hmmm, hard to handle special cases with rk4       
+    def _updateCO2HeavisideRandVel(self,t,CO2):
+        '''
+        For use only with Euler method. To use with RK4, will need 
+        to write an averaging function for the switch between random
+        velocity fields.
+
+        '''
+        ind,rem = divmod(t,self.simsParams['randVelSwitch'])
+        if rem < self.simsParams['dt']/10.:
+            self._setHeavisideRandVel(ind)
+        U = self.constantU + self.randVel1
+        V = self.constantV + self.randVel2        
         #FIXME: do upwind scheme
         #add self.constantSource to the velocity term
 
     def _updateCO2ContinuousRandVel(self,t,CO2,rkstep):
+        '''
+        For use with 4th order Runge-Kutta.
+
+        '''
         ind,rem = divmod(t,self.simsParams['randVelSwitch'])
-        if rkstep == 1 and rem < self.simsParams['dt']/10.:
+        if rkstep == 4 and rem < self.simsParams['dt']/10.:
             self._setContinuousRandVel(ind)
-        ratio = rem/self.simsParams['randVelSwitch']
-        self._continuousRandVel(ratio)
+        if rkstep > 1:
+            self._continuousRandVel(rem/self.simsParams['randVelSwitch'])
         U = self.constantU + self.randVel1
         V = self.constantV + self.randVel2
         #FIXME: do upwind scheme
