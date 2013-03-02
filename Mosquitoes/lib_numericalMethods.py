@@ -70,15 +70,18 @@ def extrapToGrid(x,y,s,h,size):
 def implicitRK():
     pass
 
-def explicitRK4(ti,yi,dt,func):
-    # 4th order Runge-Kutta solver; func takes args ti (scalar time), 
-    # and yi (vector values at time ti) 
+def explicitRK4(t,y,dt,func):
+    # 4th order Runge-Kutta solver for dy/dt = func(y,t)
+    # func takes args t (scalar time) and y (array values at time t) 
     # dt is time step
-    k1 = h*func(ti,yi)
-    k2 = h*func(ti+0.5*h, yi+0.5*k1)
-    k3 = h*func(ti+0.5*h, yi+0.5*k2)
-    k4 = h*func(ti+h, yi+k3)
-    return yi + (k1 + 2*k2 + 2*k3 + k4)/6.0
+    k1 = dt*func(t,y)
+    k2 = dt*func(t+dt/2., y+k1/2.)
+    k3 = dt*func(t+dt/2., y+k2/2.)
+    k4 = dt*func(t+dt, y+k3)
+    return y + (k1 + 2*k2 + 2*k3 + k4)/6.0
+
+def forwardEuler(t,y,dt,func):
+    return y + dt*func(t,y)
 
 def upwindScheme(U,V,environ):
     CO2 = environ.CO2
@@ -119,7 +122,5 @@ def upwindScheme(U,V,environ):
     # calculate flux term using upwinding scheme
     Flxx=(CO2*bool_upp + Cxp*bool_upm)*up - (Cxm*bool_ump + CO2*bool_umm)*um
     Flxy=(CO2*bool_vpp + Cyp*bool_vpm)*vp - (Cym*bool_vmp + CO2*bool_vmm)*vm
-    A = (Flxx+Flxy)/environ.simsParams['h']
+    return (Flxx+Flxy)/environ.simsParams['h']
  
-
-    #FIXME

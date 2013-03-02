@@ -42,8 +42,10 @@ class environment(object):
         # dt must be 1.0/N where N is an integer, so that the mosquito decisions 
         # occurring every 1.0 happen at a time step boundary.
         # finalTime must be long enough to allow all crosswind mosquitoes to find a host.
-        # numGridPoints must be chosen so that grid spacing is on the order of a 
-        # single mosquito flight
+        # numGridPoints must be chosen so that grid spacing is smaller than a typical 
+        # single mosquito flight and so that (delta x)**2 accuracy is acceptable.
+        # Note that choice for random velocity will be affected as well. Need correlation
+        # in random velocity. 
         self.simsParams = {'domainLength':100.0,'numGridPoints':128,'initialTime':0.0,'finalTime':5000.0,'dt':1.0/10,'randVelSwitch':20.0}
         self.simsParams.update(kwargs)
         h = self.simsParams['domainLength']/self.simsParams['numGridPoints']
@@ -108,7 +110,12 @@ class environment(object):
         return u,v,c
 
     def updateEnvironment(self,currentTime):
-        self.CO2 = nMeth.explicitRK4(currentTime,self.CO2,self.simsParams['dt'],self._updateCO2HeavisideRandVel)
+        # Old method using forward Euler and random velocity fields that switch
+        # every N time steps.
+        self.CO2 = nMeth.forwardEuler(currentTime,self.CO2,self.simsParams['dt'],self._updateCO2HeavisideRandVel)
+        # New method using explicit 4th order Runge-Kutta with continuous in time 
+        # (although not everywhere differentiable in time) random velocity fields.
+        # self.CO2 = nMeth.explicitRK4(currentTime,self.CO2,self.simsParams['dt'],self._updateCO2ContinuousRandVel)
 
     def _updateCO2HeavisideRandVel(self,t,CO2):
         '''
@@ -121,9 +128,9 @@ class environment(object):
         if rem < self.simsParams['dt']/10.:
             self._setHeavisideRandVel(ind)
         U = self.constantU + self.randVel1
-        V = self.constantV + self.randVel2        
-        #FIXME: do upwind scheme
-        #add self.constantSource to the velocity term
+        V = self.constantV + self.randVel2   
+        flux = nMeth.upwindScheme(U,V,environ) 
+        return -flux + self.constantSource   
 
     def _updateCO2ContinuousRandVel(self,t,CO2,rkstep):
         '''
@@ -137,8 +144,8 @@ class environment(object):
             self._continuousRandVel(rem/self.simsParams['randVelSwitch'])
         U = self.constantU + self.randVel1
         V = self.constantV + self.randVel2
-        #FIXME: do upwind scheme
-        #add self.constantSource to the velocity term
+        flux = nMeth.upwindScheme(U,V,environ) 
+        return -flux + self.constantSource   
 
 if __name__ == '__main__':
     pass
