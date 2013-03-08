@@ -109,16 +109,20 @@ def upwindScheme(U,V,environ):
     rightind = np.nonzero(up[-1,:] > 0)
     bottomind = np.nonzero(vm[:,0] < 0)
     topind = np.nonzero(vp[:,-1] > 0)
-    # add ghost cells to CO2 array and adjust for outflow bcs
+    # add ghost cells to CO2 array 
     z = np.zeros(environ.simsParams['numGridPoints'])
     Cxm = np.vstack([z,CO2[:-1,:]])
     Cxp = np.vstack([CO2[1:,:],z])
     Cym = np.hstack([z[:,np.newaxis],CO2[:,:-1]])
     Cyp = np.hstack([CO2[:,1:],z[:,np.newaxis]])
-    Cxm[0,leftind] = 2*CO2[0,leftind] - CO2[1,leftind]
-    Cxp[-1,rightind] = 2*CO2[-1,rightind] - CO2[-2,rightind]
-    Cym[bottomind,0] = 2*CO2[bottomind,0] - CO2[bottomind,1]
-    Cyp[topind,-1] = 2*CO2[topind,-1] - CO2[topind,-2]
+    # Adjust for outflow bcs. I think this is only required when there is diffusion.
+    # Otherwise there are too many BCs specified for one derivative. Also, follow
+    # the logic. The extrapolated values are never used because they are always 
+    # multiplied by zero.
+    # Cxm[0,leftind] = 2*CO2[0,leftind] - CO2[1,leftind]
+    # Cxp[-1,rightind] = 2*CO2[-1,rightind] - CO2[-2,rightind]
+    # Cym[bottomind,0] = 2*CO2[bottomind,0] - CO2[bottomind,1]
+    # Cyp[topind,-1] = 2*CO2[topind,-1] - CO2[topind,-2]
     # calculate flux term using upwinding scheme
     Flxx=(CO2*bool_upp + Cxp*bool_upm)*up - (Cxm*bool_ump + CO2*bool_umm)*um
     Flxy=(CO2*bool_vpp + Cyp*bool_vpm)*vp - (Cym*bool_vmp + CO2*bool_vmm)*vm
